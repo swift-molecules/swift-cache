@@ -25,7 +25,11 @@ let package = Package(
             targets: ["Cache Apple Foundation Integration"]
         ),
     ],
+    traits: [
+        .trait(name: "Effect", description: "Absorbed swift-cache-effect APIs"),
+    ],
     dependencies: [
+        .package(url: "https://github.com/swift-atoms/swift-effect.git", branch: "main"),
         .package(url: "https://github.com/swift-molecules/swift-async-waiter.git", branch: "main"),
         .package(
             url: "https://github.com/swift-molecules/swift-array.git",
@@ -40,10 +44,6 @@ let package = Package(
             branch: "main"
         ),
         .package(
-            url: "https://github.com/swift-molecules/swift-column.git",
-            branch: "main"
-        ),
-        .package(
             url: "https://github.com/swift-molecules/swift-buffer-ring.git",
             branch: "main"
         ),
@@ -53,8 +53,7 @@ let package = Package(
         ),
         .package(
             url: "https://github.com/swift-atoms/swift-storage.git",
-            branch: "main"
-        ),
+            branch: "main", traits: ["Generational", "Memory"]),
         .package(
             url: "https://github.com/swift-atoms/swift-memory.git",
             branch: "main"
@@ -72,20 +71,30 @@ let package = Package(
             branch: "main"
         ),
         .package(
-            url: "https://github.com/swift-molecules/swift-standard-library-extensions.git",
+            url: "https://github.com/swift-atoms/swift-standard-library-extensions.git",
             branch: "main"
         ),
+        .package(url: "https://github.com/swift-molecules/swift-ownership-shared.git", branch: "main"),
+        .package(url: "https://github.com/swift-atoms/swift-store.git", branch: "main"),
     ],
     targets: [
+        .testTarget(
+            name: "Absorbed swift-cache-effect Tests",
+            dependencies: [
+                .target(name: "Cache"),
+                .product(name: "Effect", package: "swift-effect", condition: .when(traits: ["Effect"])),
+            ],
+            path: "Tests/Absorbed swift-cache-effect"
+        ),
         .target(
             name: "Cache",
             dependencies: [
+                .product(name: "Effect", package: "swift-effect", condition: .when(traits: ["Effect"])),
                 .product(name: "Async Waiter", package: "swift-async-waiter"),
                 .product(name: "Array Primitive", package: "swift-array"),
                 .product(name: "Array", package: "swift-array"),
                 .product(name: "Async", package: "swift-async"),
                 .product(name: "Ownership", package: "swift-ownership"),
-                .product(name: "Column", package: "swift-column"),
                 .product(name: "Buffer Ring Primitive", package: "swift-buffer-ring"),
                 .product(
                     name: "Buffer Linear Primitive",
@@ -93,16 +102,18 @@ let package = Package(
                 ),
                 .product(name: "Storage", package: "swift-storage"),
                 .product(name: "Memory", package: "swift-memory"),
-                .product(
-                    name: "Memory Allocator Primitive",
-                    package: "swift-memory-allocation"
-                ),
                 .product(name: "Buffer", package: "swift-buffer"),
                 .product(name: "Queue", package: "swift-queue"),
                 .product(
                     name: "Standard Library Extensions",
                     package: "swift-standard-library-extensions"
                 ),
+                .product(name: "Buffer Linear Bounded Primitive", package: "swift-buffer-linear"),
+                .product(name: "Memory Allocator Pool", package: "swift-memory-allocation"),
+                .product(name: "Memory Pool", package: "swift-memory-allocation"),
+                .product(name: "Memory Allocator", package: "swift-memory-allocation"),
+                .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared"),
+                .product(name: "Store", package: "swift-store"),
             ]
         ),
         .target(

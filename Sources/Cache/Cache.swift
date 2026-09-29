@@ -5,13 +5,13 @@ public import Async_Waiter
 public import Buffer_Linear_Primitive
 public import Buffer
 public import Buffer_Ring_Primitive
-public import Column
-public import Memory_Allocator_Primitive
 public import Memory
+public import Memory_Allocator
+public import Storage
+
 internal import Ownership
 public import Queue
 public import Standard_Library_Extensions
-public import Storage
 
 #if DEBUG
     internal import Synchronization
@@ -172,7 +172,7 @@ extension Cache {
 
     @usableFromInline
     func pumpCancelledWaiters(entry: Entry) {
-        var resumptions = __Array<Column.Heap<Async.Waiter.Resumption>>(initialCapacity: 0)
+        var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         _storage.withLock { _ in
             guard case .computing(let waiters) = entry.state else {
 
@@ -214,7 +214,7 @@ extension Cache {
             result = .failure(error)
         }
 
-        var resumptions = __Array<Column.Heap<Async.Waiter.Resumption>>(initialCapacity: 0)
+        var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         _storage.withLock { state in
             guard case .computing(let waiters) = entry.state else {
 
@@ -294,7 +294,7 @@ extension Cache {
 
     @inlinable
     public func setValue(_ value: Value, for key: Key) {
-        var resumptions = __Array<Column.Heap<Async.Waiter.Resumption>>(initialCapacity: 0)
+        var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         _storage.withLock { state in
 
             if let existingEntry = state.entries[key],
@@ -349,7 +349,7 @@ extension Cache {
     @discardableResult
     @inlinable
     public func removeValue(for key: Key) -> Value? {
-        var resumptions = __Array<Column.Heap<Async.Waiter.Resumption>>(initialCapacity: 0)
+        var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         let value = _storage.withLock { state -> Value? in
             guard let entry = state.entries.removeValue(forKey: key) else {
                 return nil
@@ -378,7 +378,7 @@ extension Cache {
 
     @inlinable
     public func removeAll() {
-        var resumptions = __Array<Column.Heap<Async.Waiter.Resumption>>(initialCapacity: 0)
+        var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         _storage.withLock { state in
             for (_, entry) in state.entries {
                 if case .computing(let waiters) = entry.state {
