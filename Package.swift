@@ -112,6 +112,7 @@ let package = Package(
                 .product(name: "Memory Allocator Pool", package: "swift-memory-allocation"),
                 .product(name: "Memory Pool", package: "swift-memory-allocation"),
                 .product(name: "Memory Allocator", package: "swift-memory-allocation"),
+                .product(name: "Memory Allocator Protocol", package: "swift-memory-allocation"),
                 .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared"),
                 .product(name: "Store", package: "swift-store"),
             ]
