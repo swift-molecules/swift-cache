@@ -17,7 +17,7 @@ extension Cache.Bounded {
 
 extension Cache.Bounded.Storage {
     @inlinable
-    package func withLock<T: ~Copyable, E: Swift.Error>(
+    package func withLock<T: ~Copyable, E: Swift::Error>(
         _ body: (inout sending Cache.Bounded.State) throws(E) -> sending T
     ) throws(E) -> sending T {
         try _storage.mutable.value.withLock(body)

@@ -12,7 +12,7 @@ public import Storage
 
 internal import Ownership
 public import Queue
-public import Standard_Library_Extensions
+import Standard_Library_Extensions
 
 #if DEBUG
     internal import Synchronization
@@ -206,7 +206,7 @@ extension Cache {
         compute: @Sendable () async throws -> Value
     ) async throws(Self.Error) -> Value {
 
-        let result: Result<Value, any Swift.Error>
+        let result: Result<Value, any Swift::Error>
 
         do {
             let value = try await compute()

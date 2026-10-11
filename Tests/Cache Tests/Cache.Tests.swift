@@ -11,7 +11,7 @@ private actor Outcome<Value: Sendable> {
 extension Outcome {
     enum Terminal {
         case succeeded(Value)
-        case threw(any Swift.Error)
+        case threw(any Swift::Error)
     }
 
     func record(_ outcome: Terminal) {
@@ -191,7 +191,7 @@ struct Tests {
 
     @Test
     func `a failed computation does not poison the next request`() async throws {
-        struct Fault: Swift.Error, Equatable {
+        struct Fault: Swift::Error, Equatable {
             let code: Int
         }
 

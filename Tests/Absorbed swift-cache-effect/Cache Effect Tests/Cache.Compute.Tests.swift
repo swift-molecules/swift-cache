@@ -3,7 +3,7 @@ import Testing
 
 import Cache
 
-private struct Fault: Swift.Error, Sendable, Equatable {
+private struct Fault: Swift::Error, Sendable, Equatable {
     let code: Int
 }
 

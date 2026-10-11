@@ -3,7 +3,7 @@ public import Effect
 
 extension Cache {
 
-    public struct Compute<E: Swift.Error>: Effect.`Protocol` {
+    public struct Compute<E: Swift::Error>: Effect.`Protocol` {
 
         public let key: Key
 

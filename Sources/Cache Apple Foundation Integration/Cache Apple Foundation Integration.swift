@@ -1,3 +1,3 @@
-public import Cache
-public import Cache_Standard_Library_Integration
-public import Foundation
+import Cache
+import Cache_Standard_Library_Integration
+import Foundation

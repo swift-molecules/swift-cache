@@ -10,7 +10,7 @@ extension Cache.Entry {
 
         case ready(Value)
 
-        case failed(any Swift.Error)
+        case failed(any Swift::Error)
 
     }
 }

@@ -1,6 +1,6 @@
 public import Async
 public import Async_Waiter
-public import Memory
+import Memory
 public import Memory_Allocator_Protocol
 public import Queue
 
@@ -22,6 +22,6 @@ extension Cache.Entry {
 extension Cache.Entry.Waiters {
 
     @usableFromInline
-    typealias Outcome = Result<Value, any Swift.Error>
+    typealias Outcome = Result<Value, any Swift::Error>
 
 }
