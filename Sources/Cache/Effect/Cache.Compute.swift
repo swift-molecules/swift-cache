@@ -1,27 +1,27 @@
 #if Effect
-public import Effect
+    public import Effect
 
-extension Cache {
+    extension Cache {
 
-    public struct Compute<E: Swift::Error>: Effect.`Protocol` {
+        public struct Compute<E: Swift::Error>: Effect.`Protocol` {
 
-        public let key: Key
+            public let key: Key
 
-        @inlinable
-        public init(key: Key) {
-            self.key = key
+            @inlinable
+            public init(key: Key) {
+                self.key = key
+            }
         }
     }
-}
 
-extension Cache.Compute {
+    extension Cache.Compute {
 
-    public typealias Arguments = Key
+        public typealias Arguments = Key
 
-    public typealias Value = Cache._Value
+        public typealias Value = Cache._Value
 
-    public typealias Failure = E
+        public typealias Failure = E
 
-    public var arguments: Key { key }
-}
+        public var arguments: Key { key }
+    }
 #endif

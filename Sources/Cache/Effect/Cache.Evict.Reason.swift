@@ -1,17 +1,17 @@
 #if Effect
-extension Cache.Evict {
+    extension Cache.Evict {
 
-    public enum Reason: Sendable, Equatable {
+        public enum Reason: Sendable, Equatable {
 
-        case explicit
+            case explicit
 
-        case capacityLimit
+            case capacityLimit
 
-        case expired
+            case expired
 
-        case replaced
+            case replaced
 
-        case cleared
+            case cleared
+        }
     }
-}
 #endif
