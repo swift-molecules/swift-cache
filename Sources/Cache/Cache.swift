@@ -1,4 +1,3 @@
-import _Concurrency
 public import Array
 public import Array_Primitive
 public import Async
@@ -13,6 +12,7 @@ internal import Ownership
 public import Queue
 import Standard_Library_Extensions
 public import Storage
+import _Concurrency
 
 #if DEBUG
     internal import Synchronization
@@ -38,7 +38,6 @@ extension Cache {
     public func value(
         for key: Key,
 
-        // swiftlint:disable:next typed_throws_required  // reason: Callers supply arbitrary compute errors.
         compute: @Sendable () async throws -> Value
     ) async throws(Self.Error) -> Value {
 
@@ -204,11 +203,9 @@ extension Cache {
         key: Key,
         entry: Entry,
 
-        // swiftlint:disable:next typed_throws_required  // reason: Callers supply arbitrary compute errors.
         compute: @Sendable () async throws -> Value
     ) async throws(Self.Error) -> Value {
 
-        // swiftlint:disable:next no_any_protocol_existential  // reason: Cache retains caller-defined compute errors for later delivery.
         let result: Result<Value, any Swift::Error>
 
         do {
@@ -407,7 +404,6 @@ extension Cache {
         for key: Key,
         if shouldCompute: Bool,
 
-        // swiftlint:disable:next typed_throws_required  // reason: Callers supply arbitrary compute errors.
         compute: @Sendable () async throws -> Value
     ) async throws(Self.Error) -> Value? {
 
