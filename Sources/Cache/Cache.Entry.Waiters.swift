@@ -22,6 +22,7 @@ extension Cache.Entry {
 extension Cache.Entry.Waiters {
 
     @usableFromInline
+    // swiftlint:disable:next no_any_protocol_existential  // reason: Waiters deliver caller-defined compute errors.
     typealias Outcome = Result<Value, any Swift::Error>
 
 }
