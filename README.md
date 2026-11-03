@@ -33,4 +33,4 @@ let profile = try await profiles.value(for: id) {
 
 ## Effect
 
-With the `Effect` trait, `Cache.Compute` and `Cache.Evict` describe a computation and an eviction (with its `Reason`: explicit, capacity limit, expired, replaced, cleared) as effects, so a caller can intercept or record them.
+With the `Effect` trait, `Cache.Compute` and `Cache.Evict` describe a computation and an eviction (with its `Cache.Evict.Reason`: explicit, capacity limit, expired, replaced, cleared) as effects, so a caller can intercept or record them.
