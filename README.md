@@ -1,36 +1,18 @@
 # swift-cache
 
-Use `Cache` when an expensive async value is keyed and many tasks may ask for the same key at once: the first caller computes it, the others wait for that one computation, and later callers get the stored value. Use `Cache.Bounded` when you only need a thread-safe key-value store that holds at most a fixed number of entries.
+Use this package when many tasks may ask for the same expensive async value by key and it should be computed once, then kept: start from `Cache<Key, Value>`. When you only need a synchronous, thread-safe key-value store that holds a fixed number of entries, use `Cache<Key, Value>.Bounded` instead.
 
-## Model
+## Laws
 
-- `Cache<Key, Value>` is a `Sendable` value with reference semantics: copies share one store, guarded by a lock.
-- `value(for:compute:)` returns the stored value, joins a computation already running for that key, or starts one. Only the first caller's `compute` runs; every concurrent caller for that key receives its result.
-- `setValue(_:for:)` stores a value directly and hands it to any callers waiting on that key.
-- `removeValue(for:)` and `removeAll()` drop entries; callers waiting on a removed computation throw `Cache.Error.cancelled`. `removeValue(for:when:)` removes a stored value only if the condition holds for it.
-- `cachedValue(for:)`, `contains(key:)`, `count` and `isEmpty` read without computing.
-- `Cache.Bounded<Key, Value>` is a separate, synchronous store with a positive `capacity`: inserting a new key past capacity evicts the oldest inserted key (first in, first out; reads do not refresh order). Re-inserting an existing key replaces its value in place.
-
-## Rules
-
-- A failed computation is not cached. The entry is removed, every caller waiting on it receives the failure, and the next `value(for:compute:)` computes again.
-- A caller that is cancelled while waiting throws `Cache.Error.cancelled`; the shared computation keeps running for the others.
-- `compute` must be safe to run concurrently with computations for other keys; it never runs twice concurrently for one key.
-
-## Error Handling
-
-`value(for:compute:)` throws `Cache.Error`: `.computeFailed(error)` wraps what `compute` threw, and `.cancelled` reports a cancelled wait.
-
-## Example
-
-```swift
-let profiles = Cache<User.ID, Profile>()
-
-let profile = try await profiles.value(for: id) {
-    try await api.profile(id)
-}
-```
-
-## Effect
-
-With the `Effect` trait, `Cache.Compute` and `Cache.Evict` describe a computation and an eviction (with its `Cache.Evict.Reason`: explicit, capacity limit, expired, replaced, cleared) as effects, so a caller can intercept or record them.
+- One computation per key at a time. The first caller of `value(for:compute:)` for a key runs its `compute`; callers arriving while it runs wait for that result and their own `compute` is never called.
+- A successful value is kept until it is removed or replaced. `Cache<Key, Value>` has no capacity, expiry or eviction of its own.
+- A failed computation is not kept. Its entry is removed, the computing caller and every waiter throw `Cache<Key, Value>.Error.computeFailed` with the error `compute` threw, and the next request computes again.
+- A waiter that is cancelled throws `Cache<Key, Value>.Error.cancelled` promptly. The computation keeps running for the other callers.
+- `compute` runs in the first caller's task, so cancelling that caller reaches `compute`. If `compute` then throws `CancellationError`, the computing caller throws `.computeFailed` and the waiters throw `.cancelled`.
+- `removeValue(for:)` and `removeAll()` during a computation make its waiters throw `.cancelled`. The computation still finishes and returns its value to its own caller, but that value is not stored, and the next request starts a new computation.
+- `setValue(_:for:)` during a computation gives the set value to the waiters and keeps it. The computing caller still receives its own result, which is not stored.
+- `removeValue(for:when:)` only considers a stored value, never a computation in flight. The condition runs outside the lock, so it may read the same cache, and the value is removed only if the same entry is still stored afterwards.
+- `cachedValue(for:)` and `contains(key:)` see stored values only. `count` and `isEmpty` also count computations in flight.
+- `value(for:if:compute:)` with `false` returns a stored value or `nil`; it never joins a computation in flight.
+- `Cache<Key, Value>.Bounded` evicts in first-in, first-out order once a new key would exceed `capacity`. Reading a key or replacing its value does not move it in that order. `removeValue(forKey:)` frees a slot, and `filter(_:)` keeps the order of the entries it retains.
+- With the `Effect` trait, `Cache<Key, Value>.Compute<E>` and `Cache<Key, Value>.Evict` only describe a computation and an eviction. Neither `Cache<Key, Value>` nor `Cache<Key, Value>.Bounded` performs them.
