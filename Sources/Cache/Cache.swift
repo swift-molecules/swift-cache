@@ -60,7 +60,7 @@ extension Cache {
 
             case .computing:
 
-                return .wait(key, entry)
+                return .join(key, entry)
 
             case .empty:
 
@@ -76,7 +76,7 @@ extension Cache {
         case .throwError(let error):
             throw Error.computeFailed(error)
 
-        case .wait(_, let entry):
+        case .join(_, let entry):
             return try await waitForValue(entry: entry)
 
         case .compute(let key, let entry):

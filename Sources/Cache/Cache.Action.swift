@@ -6,7 +6,7 @@ extension Cache {
 
         case throwError(any Swift::Error)
 
-        case wait(Key, Entry)
+        case join(Key, Entry)
         case compute(Key, Entry)
     }
 }
