@@ -21,7 +21,7 @@ extension Outcome {
     var value: Terminal? { terminal }
 }
 
-@Suite("Cache")
+@Suite
 struct Tests {
     @Suite struct Unit {}
     @Suite struct `Edge Case` {}
