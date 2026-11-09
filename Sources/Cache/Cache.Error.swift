@@ -1,3 +1,5 @@
+import _Concurrency
+
 extension Cache {
 
     public enum Error: Swift::Error, Sendable {
