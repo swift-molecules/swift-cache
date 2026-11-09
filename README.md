@@ -8,7 +8,7 @@ Use this package when many tasks may ask for the same expensive async value by k
 - A successful value is kept until it is removed or replaced. `Cache<Key, Value>` has no capacity, expiry or eviction of its own.
 - A failed computation is not kept. Its entry is removed, the computing caller and every waiter throw `Cache<Key, Value>.Error.computeFailed` with the error `compute` threw, and the next request computes again.
 - A waiter that is cancelled throws `Cache<Key, Value>.Error.cancelled` promptly. The computation keeps running for the other callers.
-- `compute` runs in the first caller's task, so cancelling that caller reaches `compute`. If `compute` then throws `CancellationError`, the computing caller throws `.computeFailed` and the waiters throw `.cancelled`.
+- `compute` runs in the first caller's task, so cancelling that caller reaches `compute`. If `compute` then throws `CancellationError`, the computing caller and every waiter throw `.cancelled`, and the entry is removed as for any failure.
 - `removeValue(for:)` and `removeAll()` during a computation make its waiters throw `.cancelled`. The computation still finishes and returns its value to its own caller, but that value is not stored, and the next request starts a new computation.
 - `setValue(_:for:)` during a computation gives the set value to the waiters and keeps it. The computing caller still receives its own result, which is not stored.
 - `removeValue(for:when:)` only considers a stored value, never a computation in flight. The condition runs outside the lock, so it may read the same cache, and the value is removed only if the same entry is still stored afterwards.

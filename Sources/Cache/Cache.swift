@@ -74,7 +74,7 @@ extension Cache {
             return value
 
         case .throwError(let error):
-            throw Error.computeFailed(error)
+            throw Error(failure: error)
 
         case .join(_, let entry):
             return try await waitForValue(entry: entry)
@@ -161,10 +161,7 @@ extension Cache {
             return value
 
         case .failure(let error):
-            if error is CancellationError {
-                throw .cancelled
-            }
-            throw .computeFailed(error)
+            throw Error(failure: error)
         }
     }
 }
@@ -251,7 +248,7 @@ extension Cache {
             return value
 
         case .failure(let error):
-            throw Error.computeFailed(error)
+            throw Error(failure: error)
         }
     }
 }

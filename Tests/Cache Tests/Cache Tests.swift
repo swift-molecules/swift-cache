@@ -189,6 +189,58 @@ struct Tests {
         }
     #endif
 
+    #if DEBUG
+        @Test
+        func `cancelling the computing caller makes it and its waiters throw cancelled`() async throws {
+            let cache = Cache<String, Int>()
+            let producerStarted = Async.Gate()
+            let waiterEnqueued = Async.Gate()
+
+            let producer = Task { () -> Result<Int, Cache<String, Int>.Error> in
+                do throws(Cache<String, Int>.Error) {
+                    return .success(
+                        try await cache.value(for: "slow") {
+                            _ = producerStarted.open()
+                            while !Task.isCancelled {
+                                await Task.yield()
+                            }
+                            throw CancellationError()
+                        }
+                    )
+                } catch {
+                    return .failure(error)
+                }
+            }
+            await producerStarted.wait()
+
+            cache._storage.testing.waiterEnqueued.withLock { $0 = { _ = waiterEnqueued.open() } }
+            let waiter = Task { () -> Result<Int, Cache<String, Int>.Error> in
+                do throws(Cache<String, Int>.Error) {
+                    return .success(try await cache.value(for: "slow") { -1 })
+                } catch {
+                    return .failure(error)
+                }
+            }
+            await waiterEnqueued.wait()
+
+            producer.cancel()
+
+            for (name, task) in [("computing caller", producer), ("waiter", waiter)] {
+                switch await task.value {
+                case .failure(.cancelled):
+                    break
+                case .failure(let error):
+                    Issue.record("expected the \(name) to throw .cancelled, got \(error)")
+                case .success(let value):
+                    Issue.record("expected the \(name) to throw .cancelled, got \(value)")
+                }
+            }
+
+            #expect(cache.cachedValue(for: "slow") == nil)
+            #expect(cache.isEmpty)
+        }
+    #endif
+
     @Test
     func `a failed computation does not poison the next request`() async throws {
         struct Fault: Swift::Error, Equatable {
