@@ -15,10 +15,6 @@ extension Cache.Error {
     /// The computing caller and every waiter map through this one place.
     @usableFromInline
     init(failure: any Swift::Error) {
-        if failure is CancellationError {
-            self = .cancelled
-        } else {
-            self = .computeFailed(failure)
-        }
+        self = failure is CancellationError ? .cancelled : .computeFailed(failure)
     }
 }
