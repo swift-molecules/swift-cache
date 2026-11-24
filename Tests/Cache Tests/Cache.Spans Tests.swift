@@ -23,6 +23,15 @@ import Testing
         #expect(spans.count == 3)
     }
 
+    @Test func `a turn starts a span before this one is full and gives back what was not used in it`() {
+        var spans = Cache<Int, String>.Spans(capacity: 8)
+        spans.keep("a", for: 1)
+        #expect(spans.turn().isEmpty)
+        spans.keep("b", for: 2)
+        #expect(spans.turn() == [1: "a"])
+        #expect(spans.contains(2))
+    }
+
     @Test func `reading an entry of the span before carries it into this one`() {
         var spans = Cache<Int, String>.Spans(capacity: 2)
         spans.keep("a", for: 1)

@@ -65,15 +65,25 @@ extension __CacheSpans {
             filled -= held.cost
             if previous[key] != nil { shadowed.insert(key) }
         } else if filled >= Int(clamping: capacity) {
-            for (old, entry) in previous where current[old] == nil || shadowed.contains(old) { released[old] = entry.value }
-            shadowed = []
-            previous = current
-            current = [:]
-            filled = 0
+            released = turn()
         }
         if previous[key] != nil, current[key] == nil { shadowed.insert(key) }
         current[key] = (value, cost)
         filled += cost
+        return released
+    }
+
+    /// Starts a new span now, however little this one holds: the span before is let go and given back, as `keep`
+    /// does once this one is full.
+    @inlinable
+    @discardableResult
+    public mutating func turn() -> [Key: Value] {
+        var released: [Key: Value] = [:]
+        for (old, entry) in previous where current[old] == nil || shadowed.contains(old) { released[old] = entry.value }
+        shadowed = []
+        previous = current
+        current = [:]
+        filled = 0
         return released
     }
 
