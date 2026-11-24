@@ -77,6 +77,7 @@ let package = Package(
             url: "https://github.com/swift-atoms/swift-standard-library-extensions.git",
             branch: "main"
         ),
+        .package(url: "https://github.com/swift-molecules/swift-hash-table.git", branch: "main"),
         .package(url: "https://github.com/swift-molecules/swift-ownership-shared.git", branch: "main"),
         .package(url: "https://github.com/swift-atoms/swift-store.git", branch: "main"),
     ],
@@ -118,6 +119,7 @@ let package = Package(
                 .product(name: "Memory Allocator", package: "swift-memory-allocation"),
                 .product(name: "Memory Allocator Protocol", package: "swift-memory-allocation"),
                 .product(name: "Ownership Shared Primitive", package: "swift-ownership-shared"),
+                .product(name: "Hash Table Primitive", package: "swift-hash-table"),
                 .product(name: "Store", package: "swift-store"),
             ]
         ),
