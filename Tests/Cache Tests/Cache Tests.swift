@@ -1,5 +1,5 @@
 import Async
-import Synchronization
+import Lock
 import Testing
 
 @testable import Cache
@@ -102,7 +102,7 @@ struct Tests {
             let secondRemoval = cache.removeValue(for: "record") { _ in true }
             #expect(secondRemoval == nil)
 
-            cache._storage.testing.waiterEnqueued.withLock { $0 = { _ = waiterEnqueued.open() } }
+            cache.waiterEnqueued.withLock { $0.call = { _ = waiterEnqueued.open() } }
             let waiter = Task {
                 try await cache.value(for: "record") { -1 }
             }
@@ -142,7 +142,7 @@ struct Tests {
 
             await producerStarted.wait()
 
-            cache._storage.testing.waiterEnqueued.withLock { $0 = { _ = waiterEnqueued.open() } }
+            cache.waiterEnqueued.withLock { $0.call = { _ = waiterEnqueued.open() } }
             let waiter = Task {
                 let outcome: Outcome<Int>.Terminal
                 do throws(Cache<String, Int>.Error) {
@@ -213,7 +213,7 @@ struct Tests {
             }
             await producerStarted.wait()
 
-            cache._storage.testing.waiterEnqueued.withLock { $0 = { _ = waiterEnqueued.open() } }
+            cache.waiterEnqueued.withLock { $0.call = { _ = waiterEnqueued.open() } }
             let waiter = Task { () -> Result<Int, Cache<String, Int>.Error> in
                 do throws(Cache<String, Int>.Error) {
                     return .success(try await cache.value(for: "slow") { -1 })

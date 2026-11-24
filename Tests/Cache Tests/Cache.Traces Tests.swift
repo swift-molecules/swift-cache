@@ -1,31 +1,32 @@
 import Cache
 import Cardinal
-import Synchronization
+import Hash_Table_Primitive
 import Testing
 
 @Suite struct `Cache.Traces Tests` {
     @Test func `a value is made once for equal keys`() {
-        let table = Cache<Int, String>.Traces<Bool>(capacity: 64)
+        var table = Cache<Int, String>.Traces(capacity: 64)
         let first = table.value(for: 1) { "a" }
         let second = table.value(for: 1) { "b" }
         #expect(first.value == "a")
-        #expect(!first.found)
         #expect(second.value == "a")
-        #expect(second.found)
         #expect(second.number == first.number)
         #expect(table.counted == .init(found: 1, made: 1))
     }
 
     @Test func `values are numbered apart`() {
-        let table = Cache<Int, Int>.Traces<Bool>(capacity: 1024)
-        let numbers = (0..<200).compactMap { key in table.value(for: key) { key }.number }
+        var table = Cache<Int, Int>.Traces(capacity: 1024)
+        let numbers = (0..<200).map { key in table.value(for: key) { key }.number }
         #expect(Set(numbers).count == 200)
     }
 
     @Test func `a key keeps the latest few values and finds the one that holds`() {
-        let table = Cache<String, Int>.Traces<Int>(capacity: 64, variants: 2)
+        var table = Cache<String, Int>.Traces(capacity: 64, variants: 2)
         func ask(_ answer: Int) -> Bool {
-            table.value(for: "x", under: answer, where: { $0 == answer }) { answer }.found
+            let key = Hash.Once("x")
+            if table.found(key, where: { $0 == answer }) != nil { return true }
+            table.keep(answer, for: key)
+            return false
         }
         #expect(!ask(1))
         #expect(!ask(2))
@@ -35,40 +36,31 @@ import Testing
         #expect(!ask(1))
     }
 
-    @Test func `a value that is not kept is made again`() {
-        let table = Cache<Int, Int>.Traces<Bool>(capacity: 64)
-        func ask() -> (found: Bool, number: Int?) {
-            let made = table.value(for: 1, under: true, where: { _ in true }, keeps: { _ in false }) { 1 }
-            return (made.found, made.number)
+    @Test func `a value made outside the table may ask the table while it is made`() {
+        var table = Cache<Int, Int>.Traces(capacity: 64)
+        func sum(to number: Int) -> Int {
+            let key = Hash.Once(number)
+            if let found = table.found(key) { return found.value }
+            return table.keep(number == 0 ? 0 : number + sum(to: number - 1), for: key).value
         }
-        #expect(ask() == (false, nil))
-        #expect(ask() == (false, nil))
+        #expect(sum(to: 10) == 55)
+        #expect(table.counted == .init(made: 11))
+        #expect(sum(to: 9) == 45)
+        #expect(table.counted == .init(found: 1, made: 11))
     }
 
     @Test func `a failure is thrown and not kept`() {
         struct Failure: Error {}
-        let table = Cache<Int, Int>.Traces<Bool>(capacity: 64)
+        var table = Cache<Int, Int>.Traces(capacity: 64)
         #expect(throws: Failure.self) { try table.value(for: 1) { () throws(Failure) -> Int in throw Failure() } }
         #expect(table.value(for: 1) { 2 }.value == 2)
     }
 
     @Test func `a key not asked for during a whole span is forgotten`() {
-        let table = Cache<Int, Int>.Traces<Bool>(capacity: 1)
+        var table = Cache<Int, Int>.Traces(capacity: 10)
         for key in 0..<400 { _ = table.value(for: key) { key } }
-        #expect(table.counted.made == 400)
-        #expect(table.counted.forgotten >= 400 - 2 * 16)
-        #expect(!table.value(for: 0) { 0 }.found)
-    }
-
-    @Test func `those that ask for one key at once make one value`() async {
-        let table = Cache<Int, Int>.Traces<Bool>(capacity: 64)
-        let made = Atomic<Int>(0)
-        await withTaskGroup(of: Int.self) { group in
-            for _ in 0..<32 {
-                group.addTask { table.value(for: 7) { made.add(1, ordering: .relaxed).newValue }.value }
-            }
-            for await value in group { #expect(value == 1) }
-        }
-        #expect(made.load(ordering: .relaxed) == 1)
+        #expect(table.counted == .init(made: 400, forgotten: 380))
+        #expect(table.found(Hash.Once(0)) == nil)
+        #expect(table.found(Hash.Once(399)) != nil)
     }
 }

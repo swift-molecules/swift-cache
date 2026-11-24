@@ -1,6 +1,6 @@
 public import Array
 public import Array_Primitive
-public import Async
+internal import Async
 public import Async_Waiter
 public import Buffer
 public import Buffer_Linear_Primitive
@@ -8,24 +8,29 @@ public import Buffer_Ring_Primitive
 public import Memory
 public import Memory_Allocator
 public import Memory_Allocator_Protocol
-internal import Ownership
+public import Lock
 public import Queue
 import Standard_Library_Extensions
 public import Storage
 import _Concurrency
 
-#if DEBUG
-    internal import Synchronization
-#endif
-
 public struct Cache<Key: Hashable & Sendable, Value: Sendable>: Sendable {
     @usableFromInline
-    let _storage: Storage
+    let _storage: Lock<State>
 
-    @inlinable
-    public init() {
-        self._storage = Storage()
-    }
+    #if DEBUG
+        /// Called after a waiter has queued, for tests.
+        let waiterEnqueued: Lock<Enqueued>
+
+        public init() {
+            self._storage = Lock(State())
+            self.waiterEnqueued = Lock(Enqueued())
+        }
+    #else
+        public init() {
+            self._storage = Lock(State())
+        }
+    #endif
 }
 
 extension Cache {
@@ -44,28 +49,16 @@ extension Cache {
         let action = _storage.withLock { state -> Action in
             guard let entry = state.entries[key] else {
 
-                let entry = Entry()
-                entry.state = .computing(Entry.Waiters())
-                state.entries[key] = entry
-                return .compute(key, entry)
+                return .compute(state.begin(key))
             }
             switch entry.state {
             case .ready(let value):
 
                 return .returnValue(value)
 
-            case .failed(let error):
-
-                return .throwError(error)
-
             case .computing:
 
-                return .join(key, entry)
-
-            case .empty:
-
-                entry.state = .computing(Entry.Waiters())
-                return .compute(key, entry)
+                return .join(entry.number)
             }
         }
 
@@ -73,47 +66,47 @@ extension Cache {
         case .returnValue(let value):
             return value
 
-        case .throwError(let error):
-            throw Error(failure: error)
+        case .join(let number):
+            if let value = try await waitForValue(of: key, number) { return value }
+            return try await value(for: key, compute: compute)
 
-        case .join(_, let entry):
-            return try await waitForValue(entry: entry)
-
-        case .compute(let key, let entry):
-            return try await computeAndPublish(key: key, entry: entry, compute: compute)
+        case .compute(let number):
+            return try await computeAndPublish(key: key, number, compute: compute)
         }
     }
 }
 
 extension Cache {
 
+    /// The value being computed for a key under a number, or nil where that computation ended before this caller
+    /// queued and left nothing to wait for.
     @usableFromInline
-    func waitForValue(entry: Entry) async throws(Self.Error) -> Value {
+    func waitForValue(of key: Key, _ number: UInt64) async throws(Self.Error) -> Value? {
         let flag = Async.Waiter.Flag()
 
-        let outcome: Entry.Waiters.Outcome
+        let outcome: Entry.Waiters.Outcome?
         do {
             outcome = try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { continuation in
-                    let resumption = _storage.withLock { _ -> Async.Waiter.Resumption? in
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Entry.Waiters.Outcome?, any Swift::Error>) in
+                    let resumption = _storage.withLock { state -> Async.Waiter.Resumption? in
+                        guard let entry = state.entries[key], entry.number == number else {
+
+                            return Async.Waiter.Resumption {
+                                continuation.resume(returning: nil)
+                            }
+                        }
                         switch entry.state {
                         case .ready(let value):
 
                             return Async.Waiter.Resumption {
-                                continuation.resume(returning: .success(value))
-                            }
-
-                        case .failed(let error):
-
-                            return Async.Waiter.Resumption {
-                                continuation.resume(returning: .failure(error))
+                                continuation.resume(returning: Entry.Waiters.Outcome.success(value))
                             }
 
                         case .computing(let waiters):
 
                             if flag.cancelled {
                                 return Async.Waiter.Resumption {
-                                    continuation.resume(returning: .failure(CancellationError()))
+                                    continuation.resume(returning: Entry.Waiters.Outcome.failure(CancellationError()))
                                 }
                             }
 
@@ -126,14 +119,7 @@ extension Cache {
                                 flag: flag
                             )
                             waiters.queue.enqueue(waiterEntry)
-                            entry.state = .computing(waiters)
                             return nil
-
-                        case .empty:
-
-                            return Async.Waiter.Resumption {
-                                continuation.resume(throwing: Error.cancelled)
-                            }
                         }
                     }
 
@@ -141,15 +127,14 @@ extension Cache {
                         resumption.resume()
                     } else {
                         #if DEBUG
-                            let waiterEnqueued = _storage.testing.waiterEnqueued.withLock { $0 }
-                            waiterEnqueued?()
+                            waiterEnqueued.withLock { $0.call }?()
                         #endif
                     }
                 }
             } onCancel: {
 
                 if flag.cancel() {
-                    Task { self.pumpCancelledWaiters(entry: entry) }
+                    pumpCancelledWaiters(of: key, number)
                 }
             }
         } catch {
@@ -157,6 +142,9 @@ extension Cache {
         }
 
         switch outcome {
+        case nil:
+            return nil
+
         case .success(let value):
             return value
 
@@ -169,10 +157,10 @@ extension Cache {
 extension Cache {
 
     @usableFromInline
-    func pumpCancelledWaiters(entry: Entry) {
+    func pumpCancelledWaiters(of key: Key, _ number: UInt64) {
         var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
-        _storage.withLock { _ in
-            guard case .computing(let waiters) = entry.state else {
+        _storage.withLock { state in
+            guard let entry = state.entries[key], entry.number == number, case .computing(let waiters) = entry.state else {
 
                 return
             }
@@ -198,7 +186,7 @@ extension Cache {
     @usableFromInline
     func computeAndPublish(
         key: Key,
-        entry: Entry,
+        _ number: UInt64,
 
         compute: @Sendable () async throws -> Value
     ) async throws(Self.Error) -> Value {
@@ -214,21 +202,18 @@ extension Cache {
 
         var resumptions = __Array<Buffer<Storage::Storage<Memory.Allocator<Memory.Heap>>.Contiguous<Async.Waiter.Resumption>>.Linear>(initialCapacity: 0)
         _storage.withLock { state in
-            guard case .computing(let waiters) = entry.state else {
+            guard let entry = state.entries[key], entry.number == number, case .computing(let waiters) = entry.state else {
 
                 return
             }
 
             switch result {
             case .success(let value):
-                entry.state = .ready(value)
+                state.entries[key] = Entry(number: number, state: .ready(value))
 
-            case .failure(let error):
+            case .failure:
 
-                entry.state = .failed(error)
-                if state.entries[key] === entry {
-                    state.entries.removeValue(forKey: key)
-                }
+                state.entries.removeValue(forKey: key)
             }
 
             waiters.queue.drain { waiterEntry in
@@ -303,9 +288,7 @@ extension Cache {
                 }
             }
 
-            let entry = Entry()
-            entry.state = .ready(value)
-            state.entries[key] = entry
+            state.keep(value, for: key)
         }
 
         resumptions.drain { $0.resume() }
@@ -317,23 +300,23 @@ extension Cache {
         for key: Key,
         when condition: @Sendable (Value) -> Bool
     ) -> Value? {
-        let captured = _storage.withLock { state -> (Entry, Value)? in
+        let captured = _storage.withLock { state -> (UInt64, Value)? in
             guard let entry = state.entries[key],
                 case .ready(let value) = entry.state
             else {
                 return nil
             }
 
-            return (entry, value)
+            return (entry.number, value)
         }
 
-        guard let (entry, value) = captured, condition(value) else {
+        guard let (number, value) = captured, condition(value) else {
             return nil
         }
 
         return _storage.withLock { state in
             guard let current = state.entries[key],
-                current === entry,
+                current.number == number,
                 case .ready = current.state
             else {
                 return nil
@@ -362,9 +345,6 @@ extension Cache {
                 waiters.queue.drain { waiterEntry in
                     resumptions.append(waiterEntry.resumption(with: .failure(CancellationError())))
                 }
-                return nil
-
-            case .empty, .failed:
                 return nil
             }
         }

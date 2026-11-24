@@ -6,9 +6,9 @@ public import Queue
 
 extension Cache.Entry {
 
+    /// The callers waiting for a value in the making. It stays inside the cache's lock.
     @usableFromInline
-
-    final class Waiters: @unchecked Sendable {
+    final class Waiters {
         @usableFromInline
         var queue: Async.Waiter.Queue.Unbounded<Outcome, Void>
 

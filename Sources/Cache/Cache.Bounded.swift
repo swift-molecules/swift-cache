@@ -1,13 +1,15 @@
+public import Lock
+
 extension Cache {
 
     public struct Bounded: Sendable {
         @usableFromInline
-        let _storage: Storage
+        let _storage: Lock<State>
 
         @inlinable
         public init(capacity: Int) {
             precondition(capacity > 0, "Cache.Bounded capacity must be positive")
-            self._storage = Storage(capacity: capacity)
+            self._storage = Lock(State(capacity: capacity))
         }
     }
 }

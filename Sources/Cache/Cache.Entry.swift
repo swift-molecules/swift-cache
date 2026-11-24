@@ -1,18 +1,16 @@
 extension Cache {
 
     @usableFromInline
-
-    final class Entry: @unchecked Sendable {
+    struct Entry {
         @usableFromInline
-        var state: State
+        let number: UInt64
+
+        @usableFromInline
+        let state: State
 
         @inlinable
-        package init() {
-            self.state = .empty
-        }
-
-        @inlinable
-        package init(state: State) {
+        package init(number: UInt64, state: State) {
+            self.number = number
             self.state = state
         }
     }

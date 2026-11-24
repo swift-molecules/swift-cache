@@ -1,16 +1,10 @@
 extension Cache.Entry {
 
     @usableFromInline
-
-    enum State: @unchecked Sendable {
-
-        case empty
+    enum State {
 
         case computing(Waiters)
 
         case ready(Value)
-
-        case failed(any Swift::Error)
-
     }
 }

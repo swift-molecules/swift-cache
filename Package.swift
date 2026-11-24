@@ -40,10 +40,7 @@ let package = Package(
             url: "https://github.com/swift-atoms/swift-async.git",
             branch: "main"
         ),
-        .package(
-            url: "https://github.com/swift-atoms/swift-ownership.git",
-            branch: "main"
-        ),
+        .package(url: "https://github.com/swift-atoms/swift-lock.git", branch: "main"),
         .package(
             url: "https://github.com/swift-molecules/swift-buffer-ring.git",
             branch: "main"
@@ -99,7 +96,7 @@ let package = Package(
                 .product(name: "Array Primitive", package: "swift-array"),
                 .product(name: "Array", package: "swift-array"),
                 .product(name: "Async", package: "swift-async"),
-                .product(name: "Ownership", package: "swift-ownership"),
+                .product(name: "Lock", package: "swift-lock"),
                 .product(name: "Buffer Ring Primitive", package: "swift-buffer-ring"),
                 .product(
                     name: "Buffer Linear Primitive",
@@ -140,6 +137,8 @@ let package = Package(
                 .target(name: "Cache"),
                 .product(name: "Cardinal", package: "swift-cardinal"),
                 .product(name: "Async", package: "swift-async"),
+                .product(name: "Lock", package: "swift-lock"),
+                .product(name: "Hash Table Primitive", package: "swift-hash-table"),
             ]
         ),
     ],

@@ -4,9 +4,7 @@ extension Cache {
     enum Action {
         case returnValue(Value)
 
-        case throwError(any Swift::Error)
-
-        case join(Key, Entry)
-        case compute(Key, Entry)
+        case join(UInt64)
+        case compute(UInt64)
     }
 }
