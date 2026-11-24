@@ -29,6 +29,7 @@ let package = Package(
         .trait(name: "Effect", description: "Absorbed swift-cache-effect APIs")
     ],
     dependencies: [
+        .package(url: "https://github.com/swift-atoms/swift-cardinal.git", branch: "main"),
         .package(url: "https://github.com/swift-atoms/swift-effect.git", branch: "main"),
         .package(url: "https://github.com/swift-molecules/swift-async-waiter.git", branch: "main"),
         .package(
@@ -91,6 +92,7 @@ let package = Package(
         .target(
             name: "Cache",
             dependencies: [
+                .product(name: "Cardinal", package: "swift-cardinal"),
                 .product(name: "Effect", package: "swift-effect", condition: .when(traits: ["Effect"])),
                 .product(name: "Async Waiter", package: "swift-async-waiter"),
                 .product(name: "Array Primitive", package: "swift-array"),
@@ -134,6 +136,7 @@ let package = Package(
             name: "Cache Tests",
             dependencies: [
                 .target(name: "Cache"),
+                .product(name: "Cardinal", package: "swift-cardinal"),
                 .product(name: "Async", package: "swift-async"),
             ]
         ),

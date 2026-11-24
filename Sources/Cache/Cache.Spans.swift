@@ -1,3 +1,5 @@
+public import Cardinal
+
 /// A cache that is a plain value and forgets by use: it holds the entries of this span and of the one before.
 /// Reading an entry of the span before carries it into this one. Once this span holds `capacity`, the next new
 /// key starts a new span and the span before is let go, so whatever was not read for a whole span is forgotten.
@@ -19,12 +21,12 @@ public struct __CacheSpans<Key: Hashable, Value> {
     var filled = 0
 
     /// How much a span holds before the next new key starts another.
-    public let capacity: Int
+    public let capacity: Cardinal
 
     /// A cache whose spans each hold `capacity`. Traps unless `capacity` is positive.
     @inlinable
-    public init(capacity: Int) {
-        precondition(capacity > 0, "Cache.Spans capacity must be positive")
+    public init(capacity: Cardinal) {
+        precondition(capacity > .zero, "Cache.Spans capacity must be positive")
         self.capacity = capacity
     }
 }
@@ -51,11 +53,12 @@ extension __CacheSpans {
     /// for an owner that must take care of what it held; otherwise nothing is given.
     @inlinable
     @discardableResult
-    public mutating func keep(_ value: Value, for key: Key, cost: Int = 1) -> [Key: Value] {
+    public mutating func keep(_ value: Value, for key: Key, cost: Cardinal = .one) -> [Key: Value] {
+        let cost = Int(clamping: cost)
         var released: [Key: Value] = [:]
         if let held = current[key] {
             filled -= held.cost
-        } else if filled >= capacity {
+        } else if filled >= Int(clamping: capacity) {
             for (old, entry) in previous where current[old] == nil { released[old] = entry.value }
             previous = current
             current = [:]
