@@ -16,6 +16,11 @@ public struct __CacheSpans<Key: Hashable, Value> {
     @usableFromInline
     var previous: [Key: (value: Value, cost: Int)] = [:]
 
+    /// The keys of the span before whose value this span has replaced with another: the value of the span before
+    /// is then its own, and is given back when that span is let go.
+    @usableFromInline
+    var shadowed: Set<Key> = []
+
     /// What this span holds: the costs of its entries, added up.
     @usableFromInline
     var filled = 0
@@ -58,12 +63,15 @@ extension __CacheSpans {
         var released: [Key: Value] = [:]
         if let held = current[key] {
             filled -= held.cost
+            if previous[key] != nil { shadowed.insert(key) }
         } else if filled >= Int(clamping: capacity) {
-            for (old, entry) in previous where current[old] == nil { released[old] = entry.value }
+            for (old, entry) in previous where current[old] == nil || shadowed.contains(old) { released[old] = entry.value }
+            shadowed = []
             previous = current
             current = [:]
             filled = 0
         }
+        if previous[key] != nil, current[key] == nil { shadowed.insert(key) }
         current[key] = (value, cost)
         filled += cost
         return released
@@ -95,6 +103,7 @@ extension __CacheSpans {
     public mutating func removeAll() {
         current = [:]
         previous = [:]
+        shadowed = []
         filled = 0
     }
 }

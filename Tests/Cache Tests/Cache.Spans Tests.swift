@@ -79,4 +79,15 @@ import Testing
         #expect(!spans.contains(2))
         #expect(spans.contains(1))
     }
+
+    @Test func `a value of the span before that was replaced is given back when its span is let go`() {
+        var third = Cache<Int, String>.Spans(capacity: 2)
+        third.keep("a", for: 1)
+        third.keep("x", for: 9)
+        third.keep("b", for: 2)  // starts a span: 1 and 9 are the span before
+        third.keep("A", for: 1)  // replaces 1 in this span; the span before still holds "a"
+        let released = third.keep("c", for: 3)  // starts a span: the span before is let go
+        #expect(released == [1: "a", 9: "x"])
+        #expect(third.value(for: 1) == "A")
+    }
 }
