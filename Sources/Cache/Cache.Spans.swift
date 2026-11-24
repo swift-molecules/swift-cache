@@ -76,3 +76,4 @@ extension Cache.Spans {
 }
 
 extension Cache.Spans: Equatable where Value: Equatable {}
+extension Cache.Spans: Sendable {}
