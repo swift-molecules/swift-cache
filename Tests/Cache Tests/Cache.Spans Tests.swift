@@ -48,4 +48,26 @@ import Testing
         #expect(made == 1)
         #expect(spans.value(for: 7) == 49)
     }
+
+    @Test func `a value that is not Sendable is kept under the plain name`() {
+        final class Held {
+            let name: String
+            init(_ name: String) { self.name = name }
+        }
+        var spans = __CacheSpans<Int, Held>(capacity: 2)
+        spans.keep(Held("a"), for: 1)
+        #expect(spans.value(for: 1)?.name == "a")
+    }
+
+    @Test func `a span holds its capacity in cost, and the span let go is given back`() {
+        var spans = Cache<Int, String>.Spans(capacity: 10)
+        #expect(spans.keep("a", for: 1, cost: 6).isEmpty)
+        #expect(spans.keep("b", for: 2, cost: 6).isEmpty)   // 12 held: the next new key starts a span
+        #expect(spans.keep("c", for: 3, cost: 1).isEmpty)   // 1 and 2 are the span before; nothing was before them
+        #expect(spans.value(for: 1) == "a")                  // carried over with its cost: 7 held
+        #expect(spans.keep("d", for: 4, cost: 5).isEmpty)   // 12 held
+        #expect(spans.keep("e", for: 5) == [2: "b"])         // starts a span: 2, never read, is let go and given
+        #expect(!spans.contains(2))
+        #expect(spans.contains(1))
+    }
 }
